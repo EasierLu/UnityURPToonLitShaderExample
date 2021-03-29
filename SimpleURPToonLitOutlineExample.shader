@@ -2,7 +2,7 @@
 
 /*
 This shader is a simple example showing you how to write your first URP custom lit shader with "minimum" shader code.
-You can use this shader as a starting point, add/edit code to develop your own custom lit shader for URP10.2.2 or above.
+You can use this shader as a starting point, add/edit code to develop your own custom lit shader for URP10.3.2 or above.
 
 *Usually, just by editing "SimpleURPToonLitOutlineExample_LightingEquation.hlsl" alone can control most of the visual result.
 
@@ -29,11 +29,13 @@ Shader "SimpleURPToonLitExample(With Outline)"
 {
     Properties
     {
+        [Header(High Level Setting)]
+        [ToggleUI]_IsFace("Is Face? (please turn on if this is a face material)", Float) = 0
+
         // all properties will try to follow URP Lit shader's naming convention
         // so switching your URP lit material's shader to this toon lit shader will preserve most of the original properties if defined in this shader
 
         // for URP Lit shader's naming convention, see URP's Lit.shader
-
         [Header(Base Color)]
         [MainTexture]_BaseMap("_BaseMap (Albedo)", 2D) = "white" {}
         [HDR][MainColor]_BaseColor("_BaseColor", Color) = (1,1,1,1)
@@ -52,8 +54,6 @@ Shader "SimpleURPToonLitExample(With Outline)"
         [Header(Occlusion)]
         [Toggle]_UseOcclusion("_UseOcclusion (on/off Occlusion completely)", Float) = 0
         _OcclusionStrength("_OcclusionStrength", Range(0.0, 1.0)) = 1.0
-        _OcclusionIndirectStrength("_OcclusionIndirectStrength", Range(0.0, 1.0)) = 0.5
-        _OcclusionDirectStrength("_OcclusionDirectStrength", Range(0.0, 1.0)) = 0.75
         [NoScaleOffset]_OcclusionMap("_OcclusionMap", 2D) = "white" {}
         _OcclusionMapChannelMask("_OcclusionMapChannelMask", Vector) = (1,0,0,0)
         _OcclusionRemapStart("_OcclusionRemapStart", Range(0,1)) = 0
@@ -62,20 +62,21 @@ Shader "SimpleURPToonLitExample(With Outline)"
         [Header(Lighting)]
         _IndirectLightMinColor("_IndirectLightMinColor", Color) = (0.1,0.1,0.1,1) // can prevent completely black if lightprobe not baked
         _IndirectLightMultiplier("_IndirectLightMultiplier", Range(0,1)) = 1
-        _DirectLightMultiplier("_DirectLightMultiplier", Range(0,1)) = 0.25
-        _CelShadeMidPoint("_CelShadeMidPoint", Range(-1,1)) = -.5
+        _DirectLightMultiplier("_DirectLightMultiplier", Range(0,1)) = 1
+        _CelShadeMidPoint("_CelShadeMidPoint", Range(-1,1)) = -0.5
         _CelShadeSoftness("_CelShadeSoftness", Range(0,1)) = 0.05
         _MainLightIgnoreCelShade("_MainLightIgnoreCelShade", Range(0,1)) = 0
         _AdditionalLightIgnoreCelShade("_AdditionalLightIgnoreCelShade", Range(0,1)) = 0.9
 
         [Header(Shadow mapping)]
-        _ReceiveShadowMappingAmount("_ReceiveShadowMappingAmount", Range(0,1)) = 0.75
-        _ReceiveShadowMappingPosOffset("_ReceiveShadowMappingPosOffset (increase it if is face!)", Float) = 0
+        _ReceiveShadowMappingAmount("_ReceiveShadowMappingAmount", Range(0,1)) = 0.65
+        _ReceiveShadowMappingPosOffset("_ReceiveShadowMappingPosOffset", Float) = 0
+        _ShadowMapColor("_ShadowMapColor", Color) = (1,0.825,0.78)
 
         [Header(Outline)]
         _OutlineWidth("_OutlineWidth (World Space)", Range(0,4)) = 1
         _OutlineColor("_OutlineColor", Color) = (0.5,0.5,0.5,1)
-        _OutlineZOffset("_OutlineZOffset (View Space) (increase it if is face!)", Range(0,1)) = 0.0001
+        _OutlineZOffset("_OutlineZOffset (View Space)", Range(0,1)) = 0.0001
         [NoScaleOffset]_OutlineZOffsetMaskTex("_OutlineZOffsetMask (black is apply ZOffset)", 2D) = "black" {}
         _OutlineZOffsetMaskRemapStart("_OutlineZOffsetMaskRemapStart", Range(0,1)) = 0
         _OutlineZOffsetMaskRemapEnd("_OutlineZOffsetMaskRemapEnd", Range(0,1)) = 1

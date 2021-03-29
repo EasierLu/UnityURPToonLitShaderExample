@@ -1,9 +1,8 @@
 // For more information, visit -> https://github.com/ColinLeung-NiloCat/UnityURPToonLitShaderExample
 
-// #ifndef XXX + #define XXX + #endif is a safe guard best practice in almost every .hlsl, 
+// #pragma once is a safe guard best practice in almost every .hlsl (need Unity2020 or up), 
 // doing this can make sure your .hlsl's user can include this .hlsl anywhere anytime without producing any multi include conflict
-#ifndef SimpleURPToonLitOutlineExample_Shared_Include
-#define SimpleURPToonLitOutlineExample_Shared_Include
+#pragma once
 
 // We don't have "UnityCG.cginc" in SRP/URP's package anymore, so:
 // Including the following two hlsl files is enough for shading with Universal Pipeline. Everything is included in them.
@@ -76,6 +75,9 @@ sampler2D _OutlineZOffsetMaskTex;
 // put all your uniforms(usually things inside .shader file's properties{}) inside this CBUFFER, in order to make SRP batcher compatible
 // see -> https://blogs.unity3d.com/2019/02/28/srp-batcher-speed-up-your-rendering/
 CBUFFER_START(UnityPerMaterial)
+    
+    // high level settings
+    float   _IsFace;
 
     // base color
     float4  _BaseMap_ST;
@@ -93,24 +95,19 @@ CBUFFER_START(UnityPerMaterial)
     // occlusion
     float   _UseOcclusion;
     half    _OcclusionStrength;
-    half    _OcclusionIndirectStrength;
-    half    _OcclusionDirectStrength;
     half4   _OcclusionMapChannelMask;
     half    _OcclusionRemapStart;
     half    _OcclusionRemapEnd;
 
     // lighting
     half3   _IndirectLightMinColor;
-    half    _IndirectLightMultiplier;
-    half    _DirectLightMultiplier;
     half    _CelShadeMidPoint;
     half    _CelShadeSoftness;
-    half    _MainLightIgnoreCelShade;
-    half    _AdditionalLightIgnoreCelShade;
 
     // shadow mapping
     half    _ReceiveShadowMappingAmount;
     float   _ReceiveShadowMappingPosOffset;
+    half3   _ShadowMapColor;
 
     // outline
     float   _OutlineWidth;
@@ -197,7 +194,7 @@ Varyings VertexShaderWork(Attributes input)
     outlineZOffsetMask = invLerpClamp(_OutlineZOffsetMaskRemapStart,_OutlineZOffsetMaskRemapEnd,outlineZOffsetMask);// allow user to flip value or remap
 
     // [Apply ZOffset, Use remapped value as ZOffset mask]
-    output.positionCS = NiloGetNewClipPosWithZOffset(output.positionCS, _OutlineZOffset * outlineZOffsetMask);
+    output.positionCS = NiloGetNewClipPosWithZOffset(output.positionCS, _OutlineZOffset * outlineZOffsetMask + 0.03 * _IsFace);
 #endif
 
     // ShadowCaster pass needs special process to positionCS, else shadow artifact will appear
@@ -321,7 +318,7 @@ half3 ShadeAllLights(ToonSurfaceData surfaceData, LightingData lightingData)
     // You can pass optionally a shadowCoord. If so, shadowAttenuation will be computed.
     Light mainLight = GetMainLight();
 
-    float3 shadowTestPosWS = lightingData.positionWS + mainLight.direction * _ReceiveShadowMappingPosOffset;
+    float3 shadowTestPosWS = lightingData.positionWS + mainLight.direction * (_ReceiveShadowMappingPosOffset + _IsFace);
 #ifdef _MAIN_LIGHT_SHADOWS
     // compute the shadow coords in the fragment shader now due to this change
     // https://forum.unity.com/threads/shadow-cascades-weird-since-7-2-0.828453/#post-5516425
@@ -333,7 +330,7 @@ half3 ShadeAllLights(ToonSurfaceData surfaceData, LightingData lightingData)
 #endif 
 
     // Main light
-    half3 mainLightResult = ShadeMainLight(surfaceData, lightingData, mainLight);
+    half3 mainLightResult = ShadeSingleLight(surfaceData, lightingData, mainLight, false);
 
     //==============================================================================================
     // All additional lights
@@ -354,7 +351,7 @@ half3 ShadeAllLights(ToonSurfaceData surfaceData, LightingData lightingData)
         light.shadowAttenuation = AdditionalLightRealtimeShadow(perObjectLightIndex, shadowTestPosWS); // use offseted positionWS for shadow test
 
         // Different function used to shade additional lights.
-        additionalLightSumResult += ShadeAdditionalLight(surfaceData, lightingData, light);
+        additionalLightSumResult += ShadeSingleLight(surfaceData, lightingData, light, true);
     }
 #endif
     //==============================================================================================
@@ -412,5 +409,3 @@ void BaseColorAlphaClipTest(Varyings input)
 {
     DoClipTestToTargetAlphaValue(GetFinalBaseColor(input).a);
 }
-
-#endif
